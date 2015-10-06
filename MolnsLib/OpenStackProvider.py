@@ -373,14 +373,23 @@ class OpenStackController(OpenStackBase):
         {'q':'Default Instance Type (Flavor)', 'default':'standard.xsmall', 'ask':True}),
     ])
 
+    def getFreeFloatingIP(nova):
+        listFloatingIps = nova.floating_ips.list()
+        for ip in listFloatingIps:
+            if(ip.fixed_ip == None):
+                return ip
+        return nova.floating_ips.create()
+    
     def start_instance(self, num=1):
         """ Start or resume the controller. """
         #print "nova_instance = self.provider._boot_molns_vm(self, instance_type={0})".format(self.config['instance_type'])
         nova_instance = self.provider._boot_molns_vm(instance_type=self.config['instance_type'], num=num)
+        
+        ipObject = getFreeFloatingIP(nova_instance)
         if isinstance(nova_instance, list):
             ret = []
             for i in nova_instance:
-                ip = self.provider._attach_floating_ip(i)
+                ip = self.provider._attach_floating_ip(ipObject.ip)
                 i  = self.datastore.get_instance(provider_instance_identifier=i.id, ip_address=ip, provider_id=self.provider.id, controller_id=self.id)
                 ret.append(i)
             return ret
